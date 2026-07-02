@@ -1,0 +1,28 @@
+services:
+  obs-exporter:
+    build: .
+    image: obs-exporter:local
+    ports:
+      - "9438:9438"
+    environment:
+      # Required. Populate via a .env file (see README "接続設定") or the
+      # host environment — never hardcode credentials in this file.
+      OBS_EXPORTER_USERNAME: ${OBS_EXPORTER_USERNAME:?Set OBS_EXPORTER_USERNAME (e.g. in a .env file)}
+      OBS_EXPORTER_PASSWORD: ${OBS_EXPORTER_PASSWORD:?Set OBS_EXPORTER_PASSWORD (e.g. in a .env file)}
+      # Uncomment for self-signed certificate environments where a CA file
+      # is not available. Verification-only workaround; prefer the CA file
+      # + volumes mount below when possible.
+      # OBS_EXPORTER_TLS_INSECURE_SKIP_VERIFY: "true"
+      # Path inside the container to a trusted CA bundle (see the volumes
+      # mount below); set this instead of the insecure-skip-verify flag
+      # when you have the cluster's CA certificate.
+      # OBS_EXPORTER_TLS_CA_FILE: /etc/obs-exporter/ca.pem
+    # Uncomment to mount a CA bundle for --ecs.tls.ca-file /
+    # OBS_EXPORTER_TLS_CA_FILE against a self-signed ECS/ObjectScale
+    # certificate. Mount read-only.
+    # volumes:
+    #   - ./ca.pem:/etc/obs-exporter/ca.pem:ro
+    # Uncomment (and adjust the flag above) if your platform has no DT
+    # statistics endpoint on :9101:
+    # command: ["--collector.node.dt-stats=false"]
+    restart: unless-stopped

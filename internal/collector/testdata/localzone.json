@@ -1,0 +1,14 @@
+{
+  "name": "vdc1",
+  "numBadDisks": "0",
+  "numBadNodes": 0,
+  "numGoodNodes": 4,
+  "numGoodDisks": "48",
+  "alertsNumUnackCritical": [{"Count": "0"}],
+  "alertsNumUnackError": [{"Count": 1}],
+  "alertsNumUnackInfo": [{"Count": "3"}],
+  "alertsNumUnackWarning": [{"Count": 2}],
+  "diskSpaceFreeCurrent": [{"Space": "10240.5"}],
+  "diskSpaceTotalCurrent": [{"Space": 40960}],
+  "diskSpaceAllocatedCurrent": [{"Space": "30720"}]
+}

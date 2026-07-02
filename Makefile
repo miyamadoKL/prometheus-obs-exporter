@@ -1,38 +1,35 @@
 ROOT_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
-TARGET_BINARY := prometheus-emcecs-exporter
-BUILD_TIME?=$(shell date -u '+%Y-%m-%d_%H:%M:%S')
-RELEASE?=$(shell git describe --abbrev=4 --dirty --always --tags)
-COMMIT?=$(shell git rev-parse --short HEAD)
-GOPROXY?=https://proxy.golang.org
+BINARY := obs-exporter
+CMD_DIR := ./cmd/obs-exporter
 
-all: clean build
-goreleaser_hook: clean goreleaser_pre
+VERSION_PKG := github.com/prometheus/common/version
+
+VERSION    ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo unknown)
+REVISION   ?= $(shell git rev-parse HEAD 2>/dev/null || echo unknown)
+BRANCH     ?= $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)
+BUILD_USER ?= $(shell whoami)@$(shell hostname)
+BUILD_DATE ?= $(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
+
+LDFLAGS := -s -w \
+	-X $(VERSION_PKG).Version=$(VERSION) \
+	-X $(VERSION_PKG).Revision=$(REVISION) \
+	-X $(VERSION_PKG).Branch=$(BRANCH) \
+	-X $(VERSION_PKG).BuildUser=$(BUILD_USER) \
+	-X $(VERSION_PKG).BuildDate=$(BUILD_DATE)
+
+.PHONY: all build test lint clean
+
+all: clean lint test build
 
 build:
-	GOPROXY=${GOPROXY} GO111MODULE=on go build -o bin/${TARGET_BINARY} \
-		-ldflags="-X main.commit=${COMMIT} \
-		-X main.date=${BUILD_TIME} \
-		-X main.version=${RELEASE}" \
-		./cmd
+	CGO_ENABLED=0 go build -o bin/$(BINARY) -ldflags "$(LDFLAGS)" $(CMD_DIR)
 
-goreleaser:
-	goreleaser --snapshot --skip-publish --rm-dist
+test:
+	go test -race -cover ./...
 
-# This is needed to make goreleaser work in Travis
-# Since cross compiling requires special modules for Windows
-# we need to run the commands for both Windows and Linux
-goreleaser_pre:
-	GOPROXY=${GOPROXY} GOOS=linux GOARCH=amd64 go mod download
-	GOPROXY=${GOPROXY} GOOS=windows GOARCH=amd64 go mod download
-	GOPROXY=${GOPROXY} GOOS=linux GOARCH=amd64 go get ./...
-	GOPROXY=${GOPROXY} GOOS=windows GOARCH=amd64 go get ./...
+lint:
+	golangci-lint run ./...
 
 clean:
-	for file in bin/$(TARGET_BINARY); do \
-		if [ -e "$$file" ]; then \
-			rm -f "$$file" || exit 1; \
-		fi \
-	done
-	if [ -e "./dist" ]; then \
-		rm -rf ./dist; \
-	fi
+	rm -f bin/$(BINARY)
+	rm -rf dist

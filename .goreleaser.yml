@@ -1,39 +1,58 @@
+version: 2
+
+project_name: obs-exporter
+
 before:
   hooks:
-  - make goreleaser_hook
+    - go mod tidy
+
 builds:
-  - 
-    main: ./cmd/ecs_exporter.go
+  - id: obs-exporter
+    binary: obs-exporter
+    main: ./cmd/obs-exporter
     env:
-    - CGO_ENABLED=0
-    - GOPROXY=https://proxy.golang.org
-    - GO111MODULE=on
+      - CGO_ENABLED=0
     goos:
       - linux
       - windows
+      - darwin
     goarch:
       - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/prometheus/common/version.Version={{ .Version }}
+      - -X github.com/prometheus/common/version.Revision={{ .FullCommit }}
+      - -X github.com/prometheus/common/version.Branch={{ .Branch }}
+      - -X github.com/prometheus/common/version.BuildUser=goreleaser
+      - -X github.com/prometheus/common/version.BuildDate={{ .Date }}
+
 archives:
-  -
-    name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
-    replacements:
-      darwin: Darwin
-      linux: Linux
-      windows: Windows
-      386: i386
-      amd64: x86_64
+  - id: obs-exporter
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+    formats:
+      - tar.gz
     format_overrides:
-    - goos: windows
-      format: zip
+      - goos: windows
+        formats:
+          - zip
     files:
-    - README.md
-    - CHANGELOG.md
-    - LICENSE 
+      - README.md
+      - CHANGELOG.md
+      - LICENSE
+
 checksum:
-  name_template: 'checksums.txt'
+  name_template: "checksums.txt"
+
 changelog:
   sort: asc
   filters:
     exclude:
-    - '^docs:'
-    - '^test:'
+      - "^docs:"
+      - "^test:"
+
+release:
+  github:
+    owner: miyamadoKL
+    name: prometheus-obs-exporter

@@ -1,0 +1,12 @@
+{
+  "Series": [
+    {
+      "Datatypes": ["long", "dateTime:RFC3339", "double", "string", "string", "string"],
+      "Columns": ["table", "_time", "_value", "_field", "_measurement", "id"],
+      "Values": [
+        ["0", "2026-07-03T00:00:00Z", "25", "p50", "cq_performance_latency", "write"],
+        ["1", "2026-07-03T00:00:00Z", "60", "p99", "cq_performance_latency", "write"]
+      ]
+    }
+  ]
+}

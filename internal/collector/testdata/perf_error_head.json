@@ -1,0 +1,12 @@
+{
+  "Series": [
+    {
+      "Datatypes": ["long", "dateTime:RFC3339", "double", "string", "string", "string"],
+      "Columns": ["table", "_time", "_value", "_field", "_measurement", "head"],
+      "Values": [
+        ["0", "2026-07-03T00:00:00Z", "3", "system_errors", "cq_performance_error_head", "S3"],
+        ["1", "2026-07-03T00:00:00Z", "7", "user_errors", "cq_performance_error_head", "S3"]
+      ]
+    }
+  ]
+}

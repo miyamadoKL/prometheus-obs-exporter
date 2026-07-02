@@ -1,0 +1,6 @@
+{
+  "namespace": [
+    {"name": "ns1", "id": "urn:storageos:TenantOrg:ns1"},
+    {"name": "ns2", "id": "urn:storageos:TenantOrg:ns2"}
+  ]
+}

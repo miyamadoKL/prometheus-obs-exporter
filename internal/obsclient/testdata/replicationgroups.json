@@ -1,0 +1,22 @@
+{
+  "replicationgroup": [
+    {
+      "name": "rg1",
+      "replicationIngressTraffic": "1024.0",
+      "replicationEgressTraffic": 2048.0,
+      "chunksRepoPendingReplicationTotalSize": "0",
+      "chunksJournalPendingReplicationTotalSize": "512",
+      "chunksPendingXorTotalSize": 0,
+      "replicationRpoTimestamp": "1751500000000"
+    },
+    {
+      "name": "rg2",
+      "replicationIngressTraffic": 0,
+      "replicationEgressTraffic": "0",
+      "chunksRepoPendingReplicationTotalSize": "128",
+      "chunksJournalPendingReplicationTotalSize": "0",
+      "chunksPendingXorTotalSize": "0",
+      "replicationRpoTimestamp": 1751500001000
+    }
+  ]
+}
