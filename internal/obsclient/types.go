@@ -1,11 +1,11 @@
-// Package obsclient implements an HTTP client for the Dell ECS 3.8.x /
-// ObjectScale 4.x management, metering and Flux (time-series) REST APIs.
+// Package obsclient は Dell ECS 3.8.x / ObjectScale 4.x の management,
+// metering, Flux（時系列）REST API 向けの HTTP クライアントを実装する。
 //
-// This file defines the contract types: typed representations of the JSON
-// (and XML, for the DT-stats/ping endpoints) response bodies returned by
-// those APIs. Collector code (internal/collector) should depend only on
-// these types and the client methods in dashboard.go / metering.go /
-// dtstats.go / flux.go, never on raw JSON.
+// このファイルは契約型を定義する: それらの API が返す JSON（DT-stats/ping
+// エンドポイントについては XML）レスポンス body の型付き表現。コレクター
+// コード（internal/collector）は、これらの型と dashboard.go / metering.go /
+// dtstats.go / flux.go のクライアントメソッドのみに依存すべきで、生の JSON
+// に依存してはならない。
 package obsclient
 
 import (
@@ -14,24 +14,24 @@ import (
 	"strings"
 )
 
-// ErrMissing is returned by FlexNumber.Float64 / FlexNumber.Int64 when the
-// underlying JSON field was absent or null (decoded as the empty string).
-// Callers (collector code) treat this the same as any other parse error:
-// the "err == nil" guard already in place means a missing field simply
-// causes that metric series to not be emitted, rather than emitting a
-// misleading fake zero.
+// ErrMissing は、元の JSON フィールドが存在しないか null だった場合
+// （空文字列としてデコードされる）に FlexNumber.Float64 / FlexNumber.Int64
+// が返す。呼び出し側（コレクターコード）はこれを他のパースエラーと同様に
+// 扱う: 既にある "err == nil" ガードにより、フィールドが欠けている場合は
+// 単にそのメトリクスシリーズを出力しないだけで、誤解を招く偽の0を
+// 出力することはない。
 var ErrMissing = errors.New("obsclient: value missing")
 
-// FlexNumber decodes a JSON numeric value that the ECS / ObjectScale
-// dashboard and metering APIs may represent either as a native JSON number
-// (e.g. 123, 1.5) or as a quoted JSON string (e.g. "123", "1.5") -
-// both forms have been observed across API versions for the same field.
-// It stores the literal text and exposes Float64/Int64 accessors, similar
-// to encoding/json.Number but tolerant of the quoted form as well.
+// FlexNumber は、ECS / ObjectScale の dashboard/metering API がネイティブな
+// JSON 数値（例: 123, 1.5）としても、クォート付き JSON 文字列（例: "123",
+// "1.5"）としても表現しうる数値をデコードする - 同じフィールドで両方の
+// 形式が API バージョンをまたいで観測されている。リテラルなテキストを
+// そのまま保持し、Float64/Int64 アクセサを公開する。encoding/json.Number に
+// 似ているが、クォート付き形式も許容する点が異なる。
 type FlexNumber string
 
-// UnmarshalJSON implements json.Unmarshaler. It accepts both a bare JSON
-// number token and a JSON string containing a number.
+// UnmarshalJSON は json.Unmarshaler を実装する。素の JSON 数値トークンと、
+// 数値を含む JSON 文字列の両方を受け付ける。
 func (n *FlexNumber) UnmarshalJSON(data []byte) error {
 	s := strings.TrimSpace(string(data))
 	if s == "null" {
@@ -45,8 +45,8 @@ func (n *FlexNumber) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// Float64 parses the number as a float64. An empty value (field absent or
-// null) returns (0, ErrMissing) rather than a fake zero.
+// Float64 は数値を float64 としてパースする。空の値（フィールド欠落または
+// null）の場合は、偽の0ではなく (0, ErrMissing) を返す。
 func (n FlexNumber) Float64() (float64, error) {
 	if n == "" {
 		return 0, ErrMissing
@@ -54,8 +54,8 @@ func (n FlexNumber) Float64() (float64, error) {
 	return strconv.ParseFloat(string(n), 64)
 }
 
-// Int64 parses the number as an int64. An empty value (field absent or
-// null) returns (0, ErrMissing) rather than a fake zero.
+// Int64 は数値を int64 としてパースする。空の値（フィールド欠落または
+// null）の場合は、偽の0ではなく (0, ErrMissing) を返す。
 func (n FlexNumber) Int64() (int64, error) {
 	if n == "" {
 		return 0, ErrMissing
@@ -69,8 +69,8 @@ func (n FlexNumber) String() string { return string(n) }
 // Auth: GET /login, GET /user/whoami, GET /logout
 // ---------------------------------------------------------------------
 
-// WhoAmI is the response body of GET /user/whoami, used to validate that a
-// cached auth token is still usable.
+// WhoAmI は GET /user/whoami のレスポンス body で、キャッシュされた認証
+// トークンがまだ使えるか検証するのに使う。
 type WhoAmI struct {
 	CommonName string   `json:"common_name"`
 	Roles      []string `json:"roles"`
@@ -80,21 +80,21 @@ type WhoAmI struct {
 // Dashboard API: GET /dashboard/zones/localzone
 // ---------------------------------------------------------------------
 
-// CountSample is a single historical sample of a "Num*" style series in the
-// dashboard API, e.g. one element of alertsNumUnackCritical.
+// CountSample は dashboard API の "Num*" 系シリーズの1つの過去サンプル。
+// 例えば alertsNumUnackCritical の1要素。
 type CountSample struct {
 	Count FlexNumber `json:"Count"`
 }
 
-// SpaceSample is a single historical sample of a disk space series in the
-// dashboard API, e.g. one element of diskSpaceTotalCurrent. The unit is GB
-// per docs/design.md; conversion to bytes is a collector-layer concern.
+// SpaceSample は dashboard API のディスク容量シリーズの1つの過去サンプル。
+// 例えば diskSpaceTotalCurrent の1要素。単位は docs/design.md によれば GB。
+// バイトへの変換はコレクター層の責務。
 type SpaceSample struct {
 	Space FlexNumber `json:"Space"`
 }
 
-// FirstCount returns the Count of the first (current) sample in a Count
-// series, or (0, false) if the series is empty.
+// FirstCount は Count シリーズの最初（現在）のサンプルの Count を返す。
+// シリーズが空なら (0, false) を返す。
 func FirstCount(samples []CountSample) (float64, bool) {
 	if len(samples) == 0 {
 		return 0, false
@@ -106,8 +106,8 @@ func FirstCount(samples []CountSample) (float64, bool) {
 	return v, true
 }
 
-// FirstSpace returns the Space of the first (current) sample in a Space
-// series, or (0, false) if the series is empty.
+// FirstSpace は Space シリーズの最初（現在）のサンプルの Space を返す。
+// シリーズが空なら (0, false) を返す。
 func FirstSpace(samples []SpaceSample) (float64, bool) {
 	if len(samples) == 0 {
 		return 0, false
@@ -119,10 +119,11 @@ func FirstSpace(samples []SpaceSample) (float64, bool) {
 	return v, true
 }
 
-// LocalZone is the response body of GET /dashboard/zones/localzone.
-// ECS 3.6.0.0+ removed the transaction* / diskRead(Write)BandwidthTotal /
-// nodeCpuUtilization fields documented for older versions; only fields
-// still present per docs/design.md are modeled here.
+// LocalZone は GET /dashboard/zones/localzone のレスポンス body。
+// ECS 3.6.0.0+ では旧バージョンで文書化されていた transaction* /
+// diskRead(Write)BandwidthTotal / nodeCpuUtilization フィールドが
+// 削除されている。docs/design.md によればまだ存在するフィールドのみを
+// ここでモデル化している。
 type LocalZone struct {
 	Name string `json:"name"`
 
@@ -145,10 +146,10 @@ type LocalZone struct {
 // Dashboard API: GET /dashboard/zones/localzone/replicationgroups
 // ---------------------------------------------------------------------
 
-// ReplicationGroup is a single entry of the replicationgroup array returned
-// by GET /dashboard/zones/localzone/replicationgroups. The old exporter
-// mislabeled this data as "node"; docs/design.md renames the collector
-// label to "rg" (replication group name).
+// ReplicationGroup は GET /dashboard/zones/localzone/replicationgroups が
+// 返す replicationgroup 配列の1エントリ。旧 exporter はこのデータを "node"
+// と誤ってラベル付けしていた。docs/design.md ではコレクターラベルを
+// "rg"（replication group 名）に改名している。
 type ReplicationGroup struct {
 	Name string `json:"name"`
 
@@ -157,14 +158,15 @@ type ReplicationGroup struct {
 	ChunksRepoPendingReplicationTotalSize    FlexNumber `json:"chunksRepoPendingReplicationTotalSize"`
 	ChunksJournalPendingReplicationTotalSize FlexNumber `json:"chunksJournalPendingReplicationTotalSize"`
 	ChunksPendingXorTotalSize                FlexNumber `json:"chunksPendingXorTotalSize"`
-	// ReplicationRpoTimestamp is an epoch timestamp; docs/design.md notes
-	// the unit needs conversion to epoch seconds at the collector layer
-	// (the dashboard API has been observed to return epoch milliseconds).
+	// ReplicationRpoTimestamp は epoch タイムスタンプ。docs/design.md は
+	// コレクター層で epoch 秒への変換が必要だと注記している
+	// （dashboard API は epoch ミリ秒を返すことが観測されている）。
 	ReplicationRpoTimestamp FlexNumber `json:"replicationRpoTimestamp"`
 }
 
-// ReplicationGroupsResponse is the top-level response body of
-// GET /dashboard/zones/localzone/replicationgroups.
+// ReplicationGroupsResponse は
+// GET /dashboard/zones/localzone/replicationgroups のトップレベルの
+// レスポンス body。
 type ReplicationGroupsResponse struct {
 	Replicationgroup []ReplicationGroup `json:"replicationgroup"`
 }
@@ -173,7 +175,7 @@ type ReplicationGroupsResponse struct {
 // Dashboard API: GET /vdc/nodes
 // ---------------------------------------------------------------------
 
-// Node is a single entry of the node array returned by GET /vdc/nodes.
+// Node は GET /vdc/nodes が返す node 配列の1エントリ。
 type Node struct {
 	ID      string `json:"id"`
 	Name    string `json:"name"`
@@ -182,7 +184,7 @@ type Node struct {
 	Version string `json:"version"`
 }
 
-// NodesResponse is the top-level response body of GET /vdc/nodes.
+// NodesResponse は GET /vdc/nodes のトップレベルのレスポンス body。
 type NodesResponse struct {
 	Node []Node `json:"node"`
 }
@@ -192,32 +194,32 @@ type NodesResponse struct {
 // /object/billing/namespace/{ns}/info
 // ---------------------------------------------------------------------
 
-// NamespaceRef is a single entry of the namespace array returned by
-// GET /object/namespaces.
+// NamespaceRef は GET /object/namespaces が返す namespace 配列の1エントリ。
 type NamespaceRef struct {
 	Name string `json:"name"`
 	ID   string `json:"id"`
 }
 
-// NamespacesResponse is the top-level response body of
-// GET /object/namespaces.
+// NamespacesResponse は GET /object/namespaces のトップレベルの
+// レスポンス body。
 type NamespacesResponse struct {
 	Namespace []NamespaceRef `json:"namespace"`
 }
 
-// NamespaceQuota is the response body of
-// GET /object/namespaces/namespace/{namespace}/quota. Sizes are in GB per
-// docs/design.md; conversion to bytes is a collector-layer concern.
+// NamespaceQuota は
+// GET /object/namespaces/namespace/{namespace}/quota のレスポンス body。
+// docs/design.md によればサイズは GB 単位。バイトへの変換はコレクター層の
+// 責務。
 type NamespaceQuota struct {
 	Namespace        string     `json:"namespace"`
 	BlockSize        FlexNumber `json:"blockSize"`
 	NotificationSize FlexNumber `json:"notificationSize"`
 }
 
-// NamespaceBillingInfo is the response body of
-// GET /object/billing/namespace/{namespace}/info. total_size is in the unit
-// requested via the sizeunit query parameter (obsclient always requests
-// KB); conversion to bytes is a collector-layer concern.
+// NamespaceBillingInfo は
+// GET /object/billing/namespace/{namespace}/info のレスポンス body。
+// total_size は sizeunit クエリパラメータで要求した単位（obsclient は常に
+// KB を要求する）。バイトへの変換はコレクター層の責務。
 type NamespaceBillingInfo struct {
 	Namespace    string     `json:"namespace"`
 	TotalObjects FlexNumber `json:"total_objects"`
@@ -228,9 +230,9 @@ type NamespaceBillingInfo struct {
 // DT statistics: http://<node>:9101/stats/dt/DTInitStat (XML)
 // ---------------------------------------------------------------------
 
-// DTInitStat is the parsed body of http://<node>:9101/stats/dt/DTInitStat.
-// The root element name is not documented; only the <entry> child and its
-// descendants are relied upon (matches the old ecsclient.go behavior).
+// DTInitStat は http://<node>:9101/stats/dt/DTInitStat をパースした body。
+// ルート要素名は文書化されていないため、<entry> 子要素とその子孫のみに
+// 依存している（旧 ecsclient.go の挙動に合わせている）。
 type DTInitStat struct {
 	TotalDTNum   float64 `xml:"entry>total_dt_num"`
 	UnreadyDTNum float64 `xml:"entry>unready_dt_num"`
@@ -241,7 +243,7 @@ type DTInitStat struct {
 // Ping / active connections: https://<node>:<objPort>/?ping (XML)
 // ---------------------------------------------------------------------
 
-// PingResponse is the parsed body of https://<node>:<objPort>/?ping.
+// PingResponse は https://<node>:<objPort>/?ping をパースした body。
 type PingResponse struct {
 	Xmlns  string   `xml:"xmlns,attr"`
 	Name   []string `xml:"PingItem>Name"`
@@ -254,23 +256,23 @@ type PingResponse struct {
 // Flux API: POST /flux/api/external/v2/query
 // ---------------------------------------------------------------------
 
-// fluxQueryRequest is the JSON request body sent to the Flux API.
+// fluxQueryRequest は Flux API へ送る JSON リクエスト body。
 type fluxQueryRequest struct {
 	Query string `json:"query"`
 }
 
-// FluxSeries is a single element of the "Series" array in a Flux API JSON
-// response. Values contains one row per data point; every cell is a string
-// (per docs/api-research/flux-api-reference.md, all Flux JSON values are
-// string representations regardless of Datatypes).
+// FluxSeries は Flux API の JSON レスポンスにおける "Series" 配列の
+// 1要素。Values はデータポイントごとに1行を含み、各セルは文字列
+// （docs/api-research/flux-api-reference.md によれば、Flux の JSON 値は
+// Datatypes に関わらず全て文字列表現）。
 type FluxSeries struct {
 	Datatypes []string   `json:"Datatypes"`
 	Columns   []string   `json:"Columns"`
 	Values    [][]string `json:"Values"`
 }
 
-// FluxQueryResponse is the top-level JSON response body of
-// POST /flux/api/external/v2/query.
+// FluxQueryResponse は POST /flux/api/external/v2/query のトップレベルの
+// JSON レスポンス body。
 type FluxQueryResponse struct {
 	Series []FluxSeries `json:"Series"`
 }

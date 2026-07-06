@@ -6,10 +6,10 @@ import (
 	"net/url"
 )
 
-// ListNamespaces fetches GET /object/namespaces, returning every object
-// namespace defined on the cluster. Metering collection fans out per
-// namespace from this list, so it is only ever called when the metering
-// collector is explicitly requested (it is comparatively expensive).
+// ListNamespaces は GET /object/namespaces を取得し、クラスタ上に定義された
+// 全 object namespace を返す。metering の収集はこの一覧から namespace ごとに
+// ファンアウトするので、metering コレクターが明示的に要求されたときにしか
+// 呼ばれない（比較的コストが高いため）。
 func (c *Client) ListNamespaces(ctx context.Context) ([]NamespaceRef, error) {
 	var resp NamespacesResponse
 	if err := c.getAuthenticatedJSON(ctx, "/object/namespaces", &resp); err != nil {
@@ -18,13 +18,13 @@ func (c *Client) ListNamespaces(ctx context.Context) ([]NamespaceRef, error) {
 	return resp.Namespace, nil
 }
 
-// GetNamespaceQuota fetches
-// GET /object/namespaces/namespace/{namespace}/quota.
+// GetNamespaceQuota は
+// GET /object/namespaces/namespace/{namespace}/quota を取得する。
 //
-// Like every other request made by this client, the request always goes to
-// the configured management port (Config.MgmtPort); the original exporter
-// hardcoded :4443 for metering calls, which broke on clusters using a
-// non-default management port.
+// このクライアントの他の全リクエストと同様、リクエストは常に設定済みの
+// management ポート（Config.MgmtPort）へ向かう。元の exporter は metering の
+// 呼び出しで :4443 をハードコードしており、デフォルト以外の management
+// ポートを使うクラスタで壊れていた。
 func (c *Client) GetNamespaceQuota(ctx context.Context, namespace string) (*NamespaceQuota, error) {
 	path := "/object/namespaces/namespace/" + url.PathEscape(namespace) + "/quota"
 	var q NamespaceQuota
@@ -34,10 +34,10 @@ func (c *Client) GetNamespaceQuota(ctx context.Context, namespace string) (*Name
 	return &q, nil
 }
 
-// GetNamespaceBilling fetches
-// GET /object/billing/namespace/{namespace}/info?sizeunit=KB, which reports
-// current object count and usage for a namespace. Aggregation delay is up
-// to 15 minutes (up to 2h15m for S3 fan-out) per docs/design.md.
+// GetNamespaceBilling は
+// GET /object/billing/namespace/{namespace}/info?sizeunit=KB を取得する。
+// これは namespace の現在のオブジェクト数と使用量を報告する。集計の遅延は
+// docs/design.md によれば最大15分（S3 のファンアウトを考慮すると最大2時間15分）。
 func (c *Client) GetNamespaceBilling(ctx context.Context, namespace string) (*NamespaceBillingInfo, error) {
 	path := "/object/billing/namespace/" + url.PathEscape(namespace) + "/info?sizeunit=KB"
 	var info NamespaceBillingInfo

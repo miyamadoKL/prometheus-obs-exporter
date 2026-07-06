@@ -1,7 +1,7 @@
-// This file implements Registry["replication"]: metrics derived from
-// GET /dashboard/zones/localzone/replicationgroups (via
-// obsclient.Client.GetReplicationGroups), per docs/design.md's replication
-// collector contract table.
+// このファイルは Registry["replication"] を実装する:
+// GET /dashboard/zones/localzone/replicationgroups
+// （obsclient.Client.GetReplicationGroups 経由）から得られるメトリクス。
+// docs/design.md の replication コレクター契約テーブルに基づく。
 package collector
 
 import (
@@ -47,9 +47,9 @@ func init() {
 	Registry["replication"] = collectReplication
 }
 
-// collectReplication implements Registry["replication"]. GetReplicationGroups
-// is the only call; its failure means nothing can be produced. Within a
-// group, each field is emitted independently on a best-effort basis.
+// collectReplication は Registry["replication"] を実装する。呼び出すのは
+// GetReplicationGroups のみで、失敗すると何も生成できない。1つのグループ
+// 内では、各フィールドをベストエフォートで個別に出力する。
 func collectReplication(ctx context.Context, run *Run, registry *prometheus.Registry) error {
 	groups, err := run.Client.GetReplicationGroups(ctx)
 	if err != nil {
@@ -75,9 +75,9 @@ func collectReplication(ctx context.Context, run *Run, registry *prometheus.Regi
 		if v, err := g.ChunksPendingXorTotalSize.Float64(); err == nil {
 			metrics = append(metrics, prometheus.MustNewConstMetric(replicationPendingXorDesc, prometheus.GaugeValue, v, rg))
 		}
-		// ReplicationRpoTimestamp is documented (types.go) as observed to be
-		// epoch milliseconds; divide by 1000 to get epoch seconds per
-		// docs/design.md.
+		// ReplicationRpoTimestamp は（types.go に記載の通り）observed 上
+		// epoch ミリ秒であるため、docs/design.md に従い1000で割って
+		// epoch 秒に変換する。
 		if v, err := g.ReplicationRpoTimestamp.Float64(); err == nil {
 			metrics = append(metrics, prometheus.MustNewConstMetric(replicationRPODesc, prometheus.GaugeValue, v/1000, rg))
 		}

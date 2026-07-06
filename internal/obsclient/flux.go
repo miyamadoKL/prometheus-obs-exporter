@@ -8,13 +8,14 @@ import (
 	"time"
 )
 
-// fluxQueryPath is the Flux API endpoint, always reached over the
-// management port per docs/api-research/flux-api-reference.md.
+// fluxQueryPath は Flux API のエンドポイント。
+// docs/api-research/flux-api-reference.md に従い、常に management ポート
+// 経由でアクセスする。
 const fluxQueryPath = "/flux/api/external/v2/query"
 
-// fluxMetaColumns are Flux response columns that are metadata rather than
-// tags: they are consumed into dedicated FluxResult fields (or, for
-// "table"/"_start"/"_stop", dropped) instead of being copied into Tags.
+// fluxMetaColumns は、tag ではなくメタデータである Flux レスポンスの
+// カラム: Tags にコピーされる代わりに、専用の FluxResult フィールドへ
+// 取り込まれる（"table"/"_start"/"_stop" については単に破棄される）。
 var fluxMetaColumns = map[string]bool{
 	"table":        true,
 	"_start":       true,
@@ -25,31 +26,32 @@ var fluxMetaColumns = map[string]bool{
 	"_measurement": true,
 }
 
-// FluxResult is one flattened (measurement, field, tags, value) data point
-// extracted from a Flux API response row. It is intentionally generic: any
-// Flux query executed via Query decodes into these regardless of which
-// measurement/tag set it targets, matching docs/design.md's requirement of
-// a query-agnostic Flux client that the perf collector builds on.
+// FluxResult は Flux API のレスポンス行から抽出した、1つの平坦化された
+// (measurement, field, tags, value) データポイント。意図的に汎用的な設計に
+// している: Query 経由で実行される Flux クエリはどれも、対象の
+// measurement/tag セットに関わらずこの型にデコードされる。これは
+// perf コレクターが前提とする、docs/design.md の「クエリに依存しない
+// Flux クライアント」という要件に合わせたもの。
 type FluxResult struct {
 	Measurement string
 	Field       string
 	Value       float64
 	Time        time.Time
-	// Tags holds every response column other than table/_start/_stop/_time/
-	// _value/_field/_measurement, e.g. host, node_id, method, head,
-	// namespace, code, id (see flux-api-reference.md section 1.9 and 3.2).
+	// Tags は table/_start/_stop/_time/_value/_field/_measurement 以外の
+	// 全レスポンスカラムを保持する。例: host, node_id, method, head,
+	// namespace, code, id（flux-api-reference.md section 1.9, 3.2 参照）。
 	Tags map[string]string
 }
 
-// Query executes a Flux query (e.g.
-// `from(bucket:"monitoring_vdc") |> range(start: -5m) |> filter(...) |> last()`)
-// against POST /flux/api/external/v2/query with accept/content-type
-// application/json, and flattens every row of every returned series into a
-// FluxResult.
+// Query は Flux クエリ（例:
+// `from(bucket:"monitoring_vdc") |> range(start: -5m) |> filter(...) |> last()`）
+// を accept/content-type を application/json にして
+// POST /flux/api/external/v2/query に対して実行し、返ってきた各シリーズの
+// 全行を FluxResult に平坦化する。
 //
-// Rows whose _value cell cannot be parsed as a float64 are skipped rather
-// than failing the whole query, since some measurements carry non-numeric
-// tag-only rows.
+// _value セルを float64 としてパースできない行は、クエリ全体を失敗させずに
+// スキップする。measurement の中には非数値のタグのみの行を含むものが
+// あるため。
 func (c *Client) Query(ctx context.Context, query string) ([]FluxResult, error) {
 	reqBody, err := json.Marshal(fluxQueryRequest{Query: query})
 	if err != nil {

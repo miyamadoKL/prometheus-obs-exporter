@@ -9,12 +9,12 @@ import (
 	"sync"
 )
 
-// NodeDTStats is the result of probing a single node's DT statistics and
-// ping endpoints. Both endpoints are plain, unauthenticated XML and are not
-// documented in the ECS 3.8 / ObjectScale 4.x manuals (docs/design.md notes
-// their continued existence is unconfirmed); Err is set (and the numeric
-// fields left zero) if either request failed, so a single unreachable node
-// does not abort the whole scrape.
+// NodeDTStats は単一ノードの DT statistics と ping エンドポイントを
+// プローブした結果。どちらのエンドポイントも素の、未認証の XML であり、
+// ECS 3.8 / ObjectScale 4.x のマニュアルには文書化されていない
+// （docs/design.md はこれらが今も存在し続けているかは未確認と注記している）。
+// どちらかのリクエストが失敗した場合は Err がセットされ（数値フィールドは
+// 0のまま）、これにより到達不能な1ノードがスクレイプ全体を中断させない。
 type NodeDTStats struct {
 	Node string
 
@@ -26,11 +26,10 @@ type NodeDTStats struct {
 	Err error
 }
 
-// GetNodeDTStats fetches http://<node>:9101/stats/dt/DTInitStat (DT
-// counters) and https://<node>:<ObjPort>/?ping (active connection count)
-// for a single node and combines them into one result. It performs no
-// authentication, matching the two endpoints' plaintext/anonymous nature in
-// the original exporter.
+// GetNodeDTStats は単一ノードについて http://<node>:9101/stats/dt/DTInitStat
+// （DT カウンタ）と https://<node>:<ObjPort>/?ping（アクティブ接続数）を
+// 取得し、1つの結果にまとめる。認証は一切行わない。これは元の exporter に
+// おけるこの2つのエンドポイントの平文・匿名の性質に合わせている。
 func (c *Client) GetNodeDTStats(ctx context.Context, node string) NodeDTStats {
 	result := NodeDTStats{Node: node}
 
@@ -53,10 +52,9 @@ func (c *Client) GetNodeDTStats(ctx context.Context, node string) NodeDTStats {
 	return result
 }
 
-// GetAllNodeDTStats fetches GetNodeDTStats for every node in nodes
-// concurrently (mirroring the original exporter's
-// RetrieveNodeStateParallel), returning one result per input node in the
-// same order.
+// GetAllNodeDTStats は nodes の全ノードについて GetNodeDTStats を並行に
+// 取得し（元の exporter の RetrieveNodeStateParallel を踏襲）、入力と
+// 同じ順序で1ノードにつき1結果を返す。
 func (c *Client) GetAllNodeDTStats(ctx context.Context, nodes []string) []NodeDTStats {
 	results := make([]NodeDTStats, len(nodes))
 
@@ -103,8 +101,8 @@ func (c *Client) getPing(ctx context.Context, node string) (*PingResponse, error
 	return &ping, nil
 }
 
-// getRawXML performs a plain, unauthenticated GET request and returns the
-// raw response body, failing on any non-200 status.
+// getRawXML は素の、未認証の GET リクエストを実行し、生のレスポンス body を
+// 返す。200 以外のステータスは失敗として扱う。
 func (c *Client) getRawXML(ctx context.Context, url string) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {

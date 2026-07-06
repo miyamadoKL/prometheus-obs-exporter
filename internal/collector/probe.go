@@ -1,8 +1,9 @@
-// Package collector implements the Prometheus collectors dispatched by
-// GET /probe (see docs/design.md, Phase C/D). This file defines the
-// dispatch interface that cmd/obs-exporter/main.go's /probe handler is
-// wired against, plus the concrete cluster/replication/node/metering/perf
-// collectors (cluster.go, replication.go, node.go, metering.go, perf.go).
+// Package collector は GET /probe から呼び出される Prometheus コレクター群を
+// 実装する（docs/design.md の Phase C/D 参照）。このファイルは
+// cmd/obs-exporter/main.go の /probe ハンドラが利用するディスパッチ
+// インターフェースと、cluster/replication/node/metering/perf の各具体的な
+// コレクター（cluster.go, replication.go, node.go, metering.go, perf.go）を
+// 定義する。
 package collector
 
 import (
@@ -15,39 +16,39 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-// DefaultCollectors is used when the /probe request omits the collectors
-// query parameter. metering is deliberately excluded (see docs/design.md:
-// it scales with namespace count and must be requested explicitly).
+// DefaultCollectors は /probe リクエストで collectors クエリパラメータが
+// 省略された場合に使われる。metering は意図的に除外している
+// （docs/design.md 参照: namespace 数に比例してスケールするため明示的な
+// 指定を必須とする）。
 var DefaultCollectors = []string{"cluster", "replication", "node", "perf"}
 
-// Settings holds request-scoped collector configuration, threaded through
-// every /probe invocation via Run. It replaces the package-level
-// DTStatsEnabled / MeteringConcurrency / PerfRange variables that used to
-// live in node.go / metering.go / perf.go: those were process-global and
-// could not vary per request or be exercised safely in parallel tests.
+// Settings はリクエストスコープのコレクター設定を保持し、Run を介して
+// /probe の各呼び出しに渡される。かつて node.go / metering.go / perf.go に
+// あったパッケージレベルの DTStatsEnabled / MeteringConcurrency /
+// PerfRange 変数を置き換えるもの。それらはプロセスグローバルで
+// リクエストごとに変えられず、並列テストでも安全に扱えなかった。
 type Settings struct {
-	// DTStatsEnabled toggles the node collector's DT-stats/ping scrape
-	// (docs/design.md: --collector.node.dt-stats /
-	// OBS_EXPORTER_COLLECTOR_NODE_DT_STATS).
+	// DTStatsEnabled は node コレクターの DT-stats/ping スクレイプを
+	// 切り替える（docs/design.md: --collector.node.dt-stats /
+	// OBS_EXPORTER_COLLECTOR_NODE_DT_STATS）。
 	DTStatsEnabled bool
-	// MeteringConcurrency bounds how many namespaces are queried
-	// concurrently by the metering collector (docs/design.md:
-	// --collector.metering.concurrency).
+	// MeteringConcurrency は metering コレクターが同時に問い合わせる
+	// namespace 数の上限（docs/design.md: --collector.metering.concurrency）。
 	MeteringConcurrency int
-	// PerfRange is the lookback window used for every Flux query in the
-	// perf collector (docs/design.md: --collector.perf.range).
+	// PerfRange は perf コレクターの各 Flux クエリで使う遡及期間
+	// （docs/design.md: --collector.perf.range）。
 	PerfRange time.Duration
-	// Logger receives collector-level and best-effort per-item failure
-	// logs (docs/design.md's error-visibility requirements). May be nil,
-	// in which case logging is skipped.
+	// Logger はコレクター単位・項目単位（ベストエフォート）の失敗ログを
+	// 受け取る（docs/design.md のエラー可視化要件）。nil の場合はログを
+	// 出力しない。
 	Logger *slog.Logger
 }
 
-// Run bundles everything a single /probe invocation's collectors need: the
-// authenticated client, the request's Settings, and memoized accessors for
-// API calls that more than one collector needs (LocalZone, Nodes) so that a
-// single /probe call issues each of those requests at most once even when
-// multiple collectors want the same data (docs/design.md; see NewRun).
+// Run は単一の /probe 呼び出しに必要な全てをまとめる: 認証済みクライアント、
+// このリクエストの Settings、そして複数のコレクターが必要とする API 呼び出し
+// （LocalZone, Nodes）のメモ化アクセサ。これにより、複数のコレクターが同じ
+// データを求めても、1回の /probe 呼び出しにつきそれぞれのリクエストは
+// 最大1回しか発行されない（docs/design.md; NewRun も参照）。
 type Run struct {
 	Client   *obsclient.Client
 	Settings Settings
@@ -56,11 +57,12 @@ type Run struct {
 	nodes     func() ([]obsclient.Node, error)
 }
 
-// NewRun builds a Run for a single /probe invocation. ctx is captured for
-// the lifetime of the memoized LocalZone/Nodes accessors below: every
-// collector invoked for this Run is called with the same ctx (see Probe),
-// so binding it once here is equivalent to threading it through each call
-// while still fitting sync.OnceValues' no-argument function shape.
+// NewRun は単一の /probe 呼び出し用の Run を構築する。ctx は以下の
+// メモ化された LocalZone/Nodes アクセサの生存期間にわたってキャプチャ
+// される。この Run に対して呼ばれるすべてのコレクターは同じ ctx で
+// 呼び出される（Probe を参照）ので、ここで一度だけ束縛することは、
+// sync.OnceValues の引数なし関数という形に適合させつつ、各呼び出しに
+// ctx を渡すのと等価になる。
 func NewRun(ctx context.Context, client *obsclient.Client, settings Settings) *Run {
 	return &Run{
 		Client:   client,
@@ -74,34 +76,32 @@ func NewRun(ctx context.Context, client *obsclient.Client, settings Settings) *R
 	}
 }
 
-// LocalZone returns GET /dashboard/zones/localzone's result, fetching it at
-// most once per Run regardless of how many collectors call this. ctx is
-// accepted for signature symmetry/future flexibility; the underlying
-// request always uses the ctx the Run was constructed with (see NewRun).
+// LocalZone は GET /dashboard/zones/localzone の結果を返す。この Run に
+// つき何回呼ばれても取得は最大1回。ctx はシグネチャの対称性・将来の
+// 柔軟性のために受け取っているだけで、内部のリクエストは常に Run 構築時の
+// ctx を使う（NewRun 参照）。
 func (r *Run) LocalZone(ctx context.Context) (*obsclient.LocalZone, error) {
 	return r.localZone()
 }
 
-// Nodes returns GET /vdc/nodes's result, fetching it at most once per Run
-// regardless of how many collectors call this. See LocalZone for the ctx
-// caveat.
+// Nodes は GET /vdc/nodes の結果を返す。この Run につき何回呼ばれても
+// 取得は最大1回。ctx の扱いについては LocalZone を参照。
 func (r *Run) Nodes(ctx context.Context) ([]obsclient.Node, error) {
 	return r.nodes()
 }
 
-// Func is the shape every concrete collector implementation must satisfy.
-// It runs a single collector's scrape using run (the authenticated client,
-// this request's Settings, and the memoized LocalZone/Nodes accessors) and
-// registers its metrics directly into registry. Errors should be reserved
-// for failures that mean no metrics could be produced at all; partial data
-// should be emitted on a best-effort basis rather than turned into an
-// error.
+// Func は、具体的なコレクター実装が満たすべき形。run（認証済み
+// クライアント、このリクエストの Settings、メモ化された LocalZone/Nodes
+// アクセサ）を使って単一コレクターのスクレイプを実行し、そのメトリクスを
+// registry に直接登録する。エラーはメトリクスを一切生成できなかった
+// 失敗のためだけに使うべきで、部分的なデータはエラーにせずベストエフォート
+// で出力すること。
 type Func func(ctx context.Context, run *Run, registry *prometheus.Registry) error
 
-// Registry maps a collector name (as accepted by the /probe "collectors"
-// query parameter) to its implementation. cluster.go / replication.go /
-// node.go / metering.go / perf.go each populate this from their own
-// init().
+// Registry は、/probe の "collectors" クエリパラメータで受け付ける
+// コレクター名をその実装にマッピングする。cluster.go / replication.go /
+// node.go / metering.go / perf.go がそれぞれ自身の init() からここに
+// 登録する。
 var Registry = map[string]Func{}
 
 var (
@@ -117,22 +117,22 @@ var (
 	)
 )
 
-// Probe runs each of the requested collectors (by name, as looked up in
-// Registry) against client, registering their metrics into registry, along
-// with a per-collector obs_scrape_success / obs_scrape_duration_seconds
-// pair (docs/design.md: "collector単位で失敗を隔離し...に反映する").
+// Probe は要求された各コレクター（Registry で名前引きする）を client に
+// 対して実行し、そのメトリクスを registry に登録するとともに、
+// コレクターごとの obs_scrape_success / obs_scrape_duration_seconds の
+// ペアを記録する（docs/design.md: "collector単位で失敗を隔離し...に反映する"）。
 //
-// A single Run is constructed for the whole call (see NewRun) so that
-// LocalZone/Nodes are fetched at most once even when multiple requested
-// collectors need them.
+// 呼び出し全体につき単一の Run を構築する（NewRun 参照）ので、複数の
+// 要求されたコレクターが必要とする場合でも LocalZone/Nodes の取得は
+// 最大1回で済む。
 //
-// An unknown collector name (not present in Registry) is recorded as
-// obs_scrape_success=0 and logged, rather than aborting the whole request,
-// so a single bad/unimplemented collector name never fails an otherwise
-// successful scrape.
+// Registry に存在しない未知のコレクター名は、リクエスト全体を中断するのではなく
+// obs_scrape_success=0 として記録・ログ出力する。これにより、1つの
+// 不正・未実装のコレクター名が、それ以外は成功しているスクレイプ全体を
+// 失敗させることはない。
 //
-// Probe itself never returns a non-nil error for missing/failing
-// collectors; it is reserved for programmer errors (e.g. a nil client).
+// Probe 自身は、コレクターの欠落・失敗に対して非nilのエラーを返すことはない。
+// エラーはプログラマのミス（例: nil client）のために予約されている。
 func Probe(ctx context.Context, client *obsclient.Client, settings Settings, collectors []string, registry *prometheus.Registry) error {
 	run := NewRun(ctx, client, settings)
 

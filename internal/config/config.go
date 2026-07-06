@@ -1,5 +1,5 @@
-// Package config defines the command-line flags and environment variables
-// accepted by the obs-exporter binary, following docs/design.md.
+// Package config は、docs/design.md に基づき obs-exporter バイナリが
+// 受け付けるコマンドラインフラグと環境変数を定義する。
 package config
 
 import (
@@ -10,19 +10,18 @@ import (
 	"github.com/prometheus/exporter-toolkit/web"
 )
 
-// maxPerfRange is the Flux API's documented range cap (docs/design.md:
-// "range 最大 1h 制約"). A configured --collector.perf.range beyond this is
-// rejected at startup rather than failing every perf-collector scrape at
-// request time.
+// maxPerfRange は Flux API で規定されているレンジ上限（docs/design.md:
+// "range 最大 1h 制約"）。--collector.perf.range にこれを超える値が設定された
+// 場合、perf コレクターの毎スクレイプで失敗させるのではなく、起動時に拒否する。
 const maxPerfRange = time.Hour
 
-// EnvPrefix is the prefix used for all environment variables accepted by
-// the exporter (in addition to the kingpin flags themselves).
+// EnvPrefix は、kingpin のフラグに加えてこの exporter が受け付ける
+// 全環境変数に共通のプレフィックス。
 const EnvPrefix = "OBS_EXPORTER_"
 
 // Config holds all settings modifiable by the operator.
 type Config struct {
-	// ECS / ObjectScale connection settings.
+	// ECS / ObjectScale への接続設定。
 	Username string
 	Password string
 	MgmtPort int
@@ -31,17 +30,17 @@ type Config struct {
 	TLSInsecureSkipVerify bool
 	TLSCAFile             string
 
-	// Collector behavior.
+	// コレクターの挙動。
 	CollectorNodeDTStats         bool
 	CollectorMeteringConcurrency int
 	CollectorPerfRange           time.Duration
 
-	// web.go / exporter-toolkit listen configuration.
+	// web.go / exporter-toolkit のリッスン設定。
 	Web web.FlagConfig
 }
 
-// New registers all flags on the given kingpin application and returns the
-// Config that will be populated once app.Parse() is called.
+// New は指定された kingpin アプリケーションに全フラグを登録し、
+// app.Parse() 呼び出し後に値が設定される Config を返す。
 func New(app *kingpin.Application) *Config {
 	c := &Config{}
 
