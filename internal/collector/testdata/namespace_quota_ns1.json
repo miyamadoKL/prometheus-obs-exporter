@@ -1,0 +1,5 @@
+{
+  "namespace": "ns1",
+  "blockSize": "100",
+  "notificationSize": "80"
+}

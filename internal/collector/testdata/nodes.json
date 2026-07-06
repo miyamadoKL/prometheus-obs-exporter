@@ -1,0 +1,18 @@
+{
+  "node": [
+    {
+      "id": "node1-id",
+      "name": "node1",
+      "data_ip": "10.0.0.1",
+      "mgmt_ip": "10.0.1.1",
+      "version": "3.8.1.2"
+    },
+    {
+      "id": "node2-id",
+      "name": "node2",
+      "data_ip": "10.0.0.2",
+      "mgmt_ip": "10.0.1.2",
+      "version": "3.8.1.2"
+    }
+  ]
+}
