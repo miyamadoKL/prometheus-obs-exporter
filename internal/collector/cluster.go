@@ -1,7 +1,7 @@
-// This file implements Registry["cluster"]: metrics derived from
-// GET /dashboard/zones/localzone (via obsclient.Client.GetLocalZone) and,
-// best-effort, GET /vdc/nodes (via obsclient.Client.GetNodes), per
-// docs/design.md's cluster collector contract table.
+// このファイルは Registry["cluster"] を実装する: GET /dashboard/zones/localzone
+// （obsclient.Client.GetLocalZone 経由）と、ベストエフォートで
+// GET /vdc/nodes（obsclient.Client.GetNodes 経由）から得られるメトリクス。
+// docs/design.md の cluster コレクター契約テーブルに基づく。
 package collector
 
 import (
@@ -12,20 +12,20 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-// gbToBytes converts the dashboard API's disk-space "Space" values to
-// bytes, assuming decimal GB (10^9 bytes) rather than binary GiB.
+// gbToBytes は dashboard API のディスク容量 "Space" 値をバイトに変換する。
+// 単位はバイナリ GiB ではなく十進 GB（10^9 バイト）と仮定している。
 //
-// TODO(real-device verification): the manuals checked for this project
+// TODO(実機検証): 本プロジェクトで確認したマニュアル
 // (~/miyamado/user-manuals/dell-ecs/monitoring-guide/04-advanced-monitoring.md,
-// ~/miyamado/user-manuals/dell-objectscale/admin-guide/15-advanced-monitoring.md,
-// and the dashboard-API-focused admin-guide/03-monitoring.md /
-// admin-guide/14-advanced-monitoring.md) do not document the unit of
-// diskSpaceTotalCurrent / diskSpaceFreeCurrent's Space field at the field
-// level - only bare mentions of the /dashboard/zones/localzone endpoint
-// path exist, with no field-level schema or units. GB=10^9 (decimal) is
-// assumed per the task's documented fallback; confirm against a live
-// cluster whether these values are decimal GB or binary GiB before relying
-// on obs_cluster_capacity_*_bytes.
+// ~/miyamado/user-manuals/dell-objectscale/admin-guide/15-advanced-monitoring.md、
+// および dashboard API に触れている admin-guide/03-monitoring.md /
+// admin-guide/14-advanced-monitoring.md）には、
+// diskSpaceTotalCurrent / diskSpaceFreeCurrent の Space フィールドの単位が
+// フィールドレベルで記載されていない。/dashboard/zones/localzone
+// エンドポイントのパスへの言及があるのみで、フィールドレベルのスキーマや
+// 単位は不明。本タスクの既定フォールバックに従い GB=10^9（十進）と
+// 仮定しているが、obs_cluster_capacity_*_bytes に依存する前に、実機で
+// これらの値が十進 GB かバイナリ GiB かを確認すること。
 const gbToBytes = 1e9 // GB = 10^9 bytes.
 
 var (
@@ -65,11 +65,12 @@ func init() {
 	Registry["cluster"] = collectCluster
 }
 
-// collectCluster implements Registry["cluster"]. GetLocalZone is the only
-// call whose failure means nothing can be produced; GetNodes is
-// best-effort (it only feeds obs_cluster_info's version/product labels). Both
-// go through run's memoized accessors so a /probe call that also runs the
-// perf/node collectors does not repeat these API calls (docs/design.md).
+// collectCluster は Registry["cluster"] を実装する。失敗すると何も
+// 生成できなくなるのは GetLocalZone だけで、GetNodes はベストエフォート
+// （obs_cluster_info の version/product ラベルにのみ使われる）。両方とも
+// run のメモ化アクセサ経由なので、perf/node コレクターも実行される
+// /probe 呼び出しでこれらの API 呼び出しが重複することはない
+// （docs/design.md）。
 func collectCluster(ctx context.Context, run *Run, registry *prometheus.Registry) error {
 	lz, err := run.LocalZone(ctx)
 	if err != nil {
@@ -124,16 +125,16 @@ func collectCluster(ctx context.Context, run *Run, registry *prometheus.Registry
 	return nil
 }
 
-// inferProduct guesses the product family from the cluster software
-// version string.
+// inferProduct はクラスタソフトウェアのバージョン文字列からプロダクト
+// ファミリーを推測する。
 //
-// None of the API responses this exporter calls expose an explicit product
-// field; this heuristic is derived from docs/design.md's own version
-// numbering (ECS 3.8.1.x / ObjectScale 4.1.0.x).
+// この exporter が呼ぶ API レスポンスにはどれも明示的な product フィールドが
+// ないため、docs/design.md 自身のバージョン採番（ECS 3.8.1.x /
+// ObjectScale 4.1.0.x）からこのヒューリスティックを導出している。
 //
-// TODO(real-device verification): confirm this version-prefix heuristic
-// against a real cluster of each product family before relying on
-// obs_cluster_info's product label.
+// TODO(実機検証): obs_cluster_info の product ラベルに依存する前に、
+// 各プロダクトファミリーの実機クラスタでこのバージョンプレフィックスの
+// ヒューリスティックを確認すること。
 func inferProduct(version string) string {
 	switch {
 	case strings.HasPrefix(version, "3."):

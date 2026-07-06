@@ -22,32 +22,32 @@ const (
 	defaultObjPort  = 9021
 )
 
-// Config holds the per-target connection settings needed to build a Client.
-// It mirrors the ecs.* settings in internal/config.
+// Config は Client を構築するのに必要な、ターゲットごとの接続設定を保持する。
+// internal/config の ecs.* 設定に対応する。
 type Config struct {
 	Username string
 	Password string
 
-	// MgmtPort is used for every management/dashboard/metering/flux
-	// request. Unlike the original exporter, it is never hardcoded.
+	// MgmtPort は management/dashboard/metering/flux の全リクエストで
+	// 使われる。旧 exporter と異なり、ハードコードされることはない。
 	MgmtPort int
-	// ObjPort is used only for the node ping ("active connections") check.
+	// ObjPort は node ping（"active connections"）チェックにのみ使われる。
 	ObjPort int
 
 	TLSInsecureSkipVerify bool
-	// TLSCAFile, if set, is a PEM file used to verify the target's TLS
-	// certificate in addition to the system trust store.
+	// TLSCAFile が設定されている場合、システムのトラストストアに加えて
+	// ターゲットの TLS 証明書を検証するのに使う PEM ファイル。
 	TLSCAFile string
 
-	// Timeout applies to each individual HTTP request.
+	// Timeout は個々の HTTP リクエストごとに適用される。
 	Timeout time.Duration
 }
 
-// Client is an HTTP client for a single ECS / ObjectScale management
-// endpoint ("target"). It is safe for concurrent use: request execution
-// itself is unsynchronized (allowing concurrent scrapes, e.g. metering
-// namespace fan-out), while the cached auth token is protected by a mutex
-// to prevent duplicate logins (see auth.go).
+// Client は単一の ECS / ObjectScale 管理エンドポイント（"target"）向けの
+// HTTP クライアント。並行利用に対して安全: リクエストの実行自体は
+// 同期を取らない（metering の namespace ファンアウトなど並行スクレイプを
+// 許すため）が、キャッシュされた認証トークンは重複ログインを防ぐために
+// mutex で保護される（auth.go 参照）。
 type Client struct {
 	Target string
 
@@ -58,9 +58,9 @@ type Client struct {
 	authToken string
 }
 
-// New builds a Client for the given target host (no scheme/port, e.g.
-// "ecs1.example.com" or "10.0.0.1"). It performs no network I/O; call
-// Login to authenticate.
+// New は指定された target ホスト（スキーム/ポートなし、例:
+// "ecs1.example.com" や "10.0.0.1"）向けの Client を構築する。ネットワーク
+// I/O は一切行わない。認証するには Login を呼ぶこと。
 func New(target string, cfg Config) (*Client, error) {
 	if target == "" {
 		return nil, fmt.Errorf("obsclient: target must not be empty")
@@ -120,25 +120,24 @@ func loadCAFile(path string) (*x509.CertPool, error) {
 	return pool, nil
 }
 
-// mgmtURL builds an https URL against the configured management port for
-// the given absolute path (which must start with "/").
+// mgmtURL は、設定済みの management ポートに対する絶対パス（"/" で
+// 始まる必要がある）から https URL を構築する。
 func (c *Client) mgmtURL(path string) string {
 	return fmt.Sprintf("https://%s:%d%s", c.Target, c.cfg.MgmtPort, path)
 }
 
-// rawResponse is a fully-drained HTTP response: reading the body eagerly
-// keeps callers from having to worry about closing it, at the cost of
-// buffering the (small, JSON/XML) response bodies this client deals with.
+// rawResponse は body を読み切った HTTP レスポンス: body を先読みすることで
+// 呼び出し側が close を気にする必要がなくなる。代わりに、このクライアントが
+// 扱う（小さな JSON/XML の）レスポンス body をバッファリングするコストを払う。
 type rawResponse struct {
 	StatusCode int
 	Header     http.Header
 	Body       []byte
 }
 
-// doRequest performs a single HTTP request and returns its fully-read
-// response. It does not know about authentication; see auth.go for the
-// authenticated GET/POST helpers used by dashboard.go, metering.go and
-// flux.go.
+// doRequest は単一の HTTP リクエストを実行し、読み切ったレスポンスを返す。
+// 認証については関知しない。dashboard.go, metering.go, flux.go が使う
+// 認証付き GET/POST ヘルパーは auth.go を参照。
 func (c *Client) doRequest(ctx context.Context, method, url string, body []byte, headers http.Header) (*rawResponse, error) {
 	var bodyReader io.Reader
 	if body != nil {
@@ -169,12 +168,12 @@ func (c *Client) doRequest(ctx context.Context, method, url string, body []byte,
 	return &rawResponse{StatusCode: resp.StatusCode, Header: resp.Header, Body: b}, nil
 }
 
-// get performs an unauthenticated GET request.
+// get は未認証の GET リクエストを実行する。
 func (c *Client) get(ctx context.Context, url string, headers http.Header) (*rawResponse, error) {
 	return c.doRequest(ctx, http.MethodGet, url, nil, headers)
 }
 
-// post performs an unauthenticated POST request.
+// post は未認証の POST リクエストを実行する。
 func (c *Client) post(ctx context.Context, url string, body []byte, headers http.Header) (*rawResponse, error) {
 	return c.doRequest(ctx, http.MethodPost, url, body, headers)
 }

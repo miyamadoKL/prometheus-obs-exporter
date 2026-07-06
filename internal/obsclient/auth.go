@@ -8,21 +8,21 @@ import (
 	"net/http"
 )
 
-// authTokenHeader is the header ECS / ObjectScale uses both to return a
-// freshly-issued token from /login and to accept it on subsequent requests.
+// authTokenHeader は ECS / ObjectScale が /login から発行したてのトークンを
+// 返すのにも、以降のリクエストでそれを受け付けるのにも使うヘッダー。
 const authTokenHeader = "X-SDS-AUTH-TOKEN"
 
-// Login authenticates against GET /login using HTTP Basic auth and stores
-// the resulting X-SDS-AUTH-TOKEN for use by subsequent requests. It is safe
-// to call concurrently; concurrent callers will not trigger duplicate
-// logins.
+// Login は HTTP Basic 認証で GET /login に対して認証を行い、得られた
+// X-SDS-AUTH-TOKEN を以降のリクエスト用に保存する。並行呼び出しに対して
+// 安全であり、同時に呼んでも重複ログインは起きない。
 func (c *Client) Login(ctx context.Context) error {
 	c.authMu.Lock()
 	defer c.authMu.Unlock()
 	return c.login(ctx)
 }
 
-// login performs the actual /login call. Callers must hold authMu.
+// login は実際の /login 呼び出しを行う。呼び出し側は authMu を保持している
+// こと。
 func (c *Client) login(ctx context.Context) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.mgmtURL("/login"), nil)
 	if err != nil {
@@ -50,11 +50,11 @@ func (c *Client) login(ctx context.Context) error {
 	return nil
 }
 
-// Logout invalidates the current token via GET /logout, if one is held. It
-// is safe to call when already logged out (including concurrently with
-// other Logout calls) and is intended to be called for every cached client
-// on SIGTERM/SIGINT, since ECS/ObjectScale caps active tokens per user
-// at 100.
+// Logout は、トークンを保持していれば GET /logout でそれを無効化する。
+// 既にログアウト済みの状態で呼んでも安全（他の Logout 呼び出しと同時でも）で、
+// ECS/ObjectScale がユーザーごとの有効トークン数を100件に制限していることから、
+// SIGTERM/SIGINT 時にキャッシュ済みの全クライアントに対して呼ばれることを
+// 想定している。
 func (c *Client) Logout(ctx context.Context) error {
 	c.authMu.Lock()
 	defer c.authMu.Unlock()
@@ -80,16 +80,15 @@ func (c *Client) Logout(ctx context.Context) error {
 
 	switch resp.StatusCode {
 	case http.StatusOK, http.StatusUnauthorized:
-		// 401 here just means we were already logged out.
+		// ここでの 401 は単に既にログアウト済みだったことを意味する。
 		return nil
 	default:
 		return fmt.Errorf("obsclient: logout from %s failed with status %s", c.Target, resp.Status)
 	}
 }
 
-// WhoAmI calls GET /user/whoami, which both validates that the current
-// token is still usable and returns the authenticated user's identity and
-// roles.
+// WhoAmI は GET /user/whoami を呼び出す。これは現在のトークンがまだ使える
+// ことを検証すると同時に、認証済みユーザーの identity と roles を返す。
 func (c *Client) WhoAmI(ctx context.Context) (*WhoAmI, error) {
 	var who WhoAmI
 	if err := c.getAuthenticatedJSON(ctx, "/user/whoami", &who); err != nil {
@@ -98,10 +97,10 @@ func (c *Client) WhoAmI(ctx context.Context) (*WhoAmI, error) {
 	return &who, nil
 }
 
-// ensureLoggedIn returns the current token, logging in first if none is
-// cached. Holding authMu here (rather than for the whole request) is what
-// lets multiple in-flight requests share one token without serializing on
-// every HTTP call, while still preventing duplicate logins.
+// ensureLoggedIn は現在のトークンを返し、キャッシュがなければ先にログインする。
+// リクエスト全体ではなくここだけで authMu を保持することで、複数の実行中の
+// リクエストが1つのトークンを共有しつつ、HTTP 呼び出しごとに直列化することなく
+// 重複ログインも防げる。
 func (c *Client) ensureLoggedIn(ctx context.Context) (string, error) {
 	c.authMu.Lock()
 	defer c.authMu.Unlock()
@@ -113,9 +112,10 @@ func (c *Client) ensureLoggedIn(ctx context.Context) (string, error) {
 	return c.authToken, nil
 }
 
-// invalidateToken clears the cached token, but only if it still matches
-// old - this avoids a late invalidation from one request clobbering a
-// newer token another request already obtained via re-login.
+// invalidateToken はキャッシュされたトークンをクリアするが、それが old と
+// まだ一致している場合のみ行う - こうすることで、あるリクエストからの
+// 遅れた無効化が、別のリクエストが再ログインで既に取得した新しいトークンを
+// 潰してしまうのを防ぐ。
 func (c *Client) invalidateToken(old string) {
 	c.authMu.Lock()
 	defer c.authMu.Unlock()
@@ -135,11 +135,11 @@ func (c *Client) requestWithToken(ctx context.Context, method, url string, body 
 	return c.get(ctx, url, headers)
 }
 
-// callAuthenticatedJSON performs an authenticated request against url,
-// decoding a JSON response body into out (if non-nil). If the first attempt
-// receives a 401, the cached token is invalidated, a single re-login is
-// attempted, and the request is retried exactly once - the old exporter's
-// unbounded recursive retry-on-401 is intentionally not reproduced.
+// callAuthenticatedJSON は url に対して認証付きリクエストを実行し、（非nilなら）
+// out へ JSON レスポンス body をデコードする。最初の試行が 401 を受け取った
+// 場合、キャッシュされたトークンを無効化し、1回だけ再ログインを試みて
+// リクエストを1回だけリトライする - 旧 exporter にあった 401 時の
+// 無制限な再帰リトライは意図的に再現していない。
 func (c *Client) callAuthenticatedJSON(ctx context.Context, method, url string, body []byte, out any) error {
 	token, err := c.ensureLoggedIn(ctx)
 	if err != nil {
@@ -177,14 +177,14 @@ func (c *Client) callAuthenticatedJSON(ctx context.Context, method, url string, 
 	return nil
 }
 
-// getAuthenticatedJSON performs an authenticated GET against the given
-// management-API path (relative, e.g. "/dashboard/zones/localzone").
+// getAuthenticatedJSON は指定された management-API パス（相対パス、例:
+// "/dashboard/zones/localzone"）に対して認証付き GET を実行する。
 func (c *Client) getAuthenticatedJSON(ctx context.Context, path string, out any) error {
 	return c.callAuthenticatedJSON(ctx, http.MethodGet, c.mgmtURL(path), nil, out)
 }
 
-// postAuthenticatedJSON performs an authenticated POST with a JSON body
-// against the given management-API path.
+// postAuthenticatedJSON は指定された management-API パスに対して JSON body
+// 付きの認証済み POST を実行する。
 func (c *Client) postAuthenticatedJSON(ctx context.Context, path string, body []byte, out any) error {
 	return c.callAuthenticatedJSON(ctx, http.MethodPost, c.mgmtURL(path), body, out)
 }

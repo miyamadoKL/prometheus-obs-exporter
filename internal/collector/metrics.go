@@ -1,10 +1,9 @@
-// Package collector (this file) provides a small shared helper used by
-// every concrete collector (cluster.go, replication.go, node.go,
-// metering.go, perf.go) and by probe.go itself (for
-// obs_scrape_success / obs_scrape_duration_seconds): an adapter that turns
-// a plain slice of already-built prometheus.Metric values into a
-// prometheus.Collector, so it can be registered into a
-// *prometheus.Registry via MustRegister.
+// Package collector（このファイル）は、全ての具体的コレクター
+// （cluster.go, replication.go, node.go, metering.go, perf.go）と
+// probe.go 自身（obs_scrape_success / obs_scrape_duration_seconds 用）が
+// 使う小さな共有ヘルパーを提供する: 構築済みの prometheus.Metric の
+// スライスを prometheus.Collector に変換するアダプタで、
+// *prometheus.Registry へ MustRegister で登録できるようにする。
 package collector
 
 import "github.com/prometheus/client_golang/prometheus"

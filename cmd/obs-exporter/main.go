@@ -1,6 +1,6 @@
-// Command obs-exporter is a Prometheus multi-target exporter for Dell
-// ObjectScale 4.x / ECS 3.8.x clusters. See docs/design.md for the overall
-// design and API research behind it.
+// Command obs-exporter は Dell ObjectScale 4.x / ECS 3.8.x クラスタ向けの
+// Prometheus マルチターゲット exporter。全体設計と背景となる API 調査は
+// docs/design.md を参照。
 package main
 
 import (
@@ -75,12 +75,12 @@ func main() {
 
 	srv := &http.Server{Handler: mux}
 
-	// Trap SIGTERM/SIGINT: stop accepting new requests and drain active
-	// ones (srv.Shutdown) before logging out of every cached target
-	// (ECS/ObjectScale caps active tokens at 100 per user). Logging out
-	// first would risk invalidating tokens still in use by in-flight
-	// /probe requests; draining first ensures no request is scraping with
-	// a client whose token gets pulled out from under it.
+	// SIGTERM/SIGINT を捕捉し、新規リクエストの受付を止めて処理中のリクエストを
+	// ドレイン（srv.Shutdown）してから、キャッシュ済みの全ターゲットをログアウトする
+	// （ECS/ObjectScale はユーザーごとに有効トークン数の上限が100件）。
+	// 先にログアウトすると、処理中の /probe リクエストが使っているトークンを
+	// 無効化してしまう恐れがある。先にドレインすることで、トークンを
+	// 足元から抜かれた状態でスクレイプ中のクライアントが発生しないようにする。
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
@@ -103,7 +103,7 @@ func main() {
 	}
 }
 
-// probeHandler implements GET /probe?target=<host>[&collectors=a,b,c].
+// probeHandler は GET /probe?target=<host>[&collectors=a,b,c] を実装する。
 func probeHandler(logger *slog.Logger, cfg *config.Config, clients *sync.Map) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
@@ -144,11 +144,11 @@ func probeHandler(logger *slog.Logger, cfg *config.Config, clients *sync.Map) ht
 	}
 }
 
-// getOrCreateClient returns a cached, logged-in obsclient.Client for
-// target, creating and logging in a new one if needed. Concurrent scrapes
-// of the same, not-yet-cached target are resolved via sync.Map's
-// LoadOrStore: whichever client loses the race logs itself back out
-// immediately rather than leaking an extra token.
+// getOrCreateClient は target に対応するキャッシュ済み・ログイン済みの
+// obsclient.Client を返し、なければ新規作成してログインする。まだキャッシュ
+// されていない同一 target への同時スクレイプは sync.Map の LoadOrStore で
+// 解決される。競合に負けたクライアントは、余分なトークンをリークしないよう
+// 即座に自分でログアウトする。
 func getOrCreateClient(ctx context.Context, target string, cfg *config.Config, clients *sync.Map) (*obsclient.Client, error) {
 	if v, ok := clients.Load(target); ok {
 		return v.(*obsclient.Client), nil
@@ -178,8 +178,8 @@ func getOrCreateClient(ctx context.Context, target string, cfg *config.Config, c
 	return c, nil
 }
 
-// logoutAll logs out of every cached client. Best-effort: failures are
-// logged but do not prevent shutdown from proceeding.
+// logoutAll はキャッシュ済みの全クライアントをログアウトする。ベストエフォート
+// であり、失敗してもログに残すのみでシャットダウン処理は継続する。
 func logoutAll(clients *sync.Map, logger *slog.Logger) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()

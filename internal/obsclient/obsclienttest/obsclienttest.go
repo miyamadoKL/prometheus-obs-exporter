@@ -1,15 +1,15 @@
-// Package obsclienttest provides shared httptest fixture-server plumbing
-// used by both internal/obsclient's own black-box tests and
-// internal/collector's tests (which need a real, authenticated
-// obsclient.Client backed by a fixture server). It exists to avoid
-// duplicating this plumbing between the two packages.
+// Package obsclienttest は、internal/obsclient 自身のブラックボックステストと
+// internal/collector のテスト（フィクスチャサーバーに裏打ちされた実際の、
+// 認証済み obsclient.Client を必要とする）の両方で使われる共有 httptest
+// フィクスチャサーバーの配線を提供する。この配線を両パッケージ間で
+// 重複させないために存在する。
 //
-// internal/obsclient/auth_test.go deliberately does not use this package:
-// it is a white-box (package obsclient) test that asserts against the
-// unexported authToken field, and an in-package test file cannot import a
-// package that itself imports obsclient - that would be an import cycle.
-// It keeps a small private copy of ServeFixture/NewTestClient instead (see
-// internal/obsclient/testhelpers_test.go).
+// internal/obsclient/auth_test.go は意図的にこのパッケージを使わない:
+// これは非公開の authToken フィールドに対してアサートするホワイトボックス
+// （package obsclient）テストであり、パッケージ内テストファイルは
+// obsclient 自身をインポートするパッケージをインポートできない
+// （import cycle になる）。代わりに ServeFixture/NewTestClient の
+// 小さな非公開コピーを持つ（internal/obsclient/testhelpers_test.go 参照）。
 package obsclienttest
 
 import (
@@ -23,21 +23,21 @@ import (
 	"github.com/miyamadoKL/prometheus-obs-exporter/internal/obsclient"
 )
 
-// AuthTokenHeader mirrors obsclient's unexported authTokenHeader constant
-// (internal/obsclient/auth.go); duplicated here since it cannot be
-// imported.
+// AuthTokenHeader は obsclient の非公開の authTokenHeader 定数
+// （internal/obsclient/auth.go）に対応する。インポートできないためここで
+// 複製している。
 const AuthTokenHeader = "X-SDS-AUTH-TOKEN"
 
-// Username and Password are the credentials fixture servers can expect and
-// that NewTestClient configures its Client with.
+// Username と Password は、フィクスチャサーバーが期待してよい認証情報で、
+// NewTestClient が Client に設定するのもこの値。
 const (
 	Username = "monitor"
 	Password = "s3cr3t"
 )
 
-// ServeFixture writes the contents of testdata/name (resolved relative to
-// the running test binary's working directory, i.e. the package under
-// test's directory) as a JSON response body.
+// ServeFixture は testdata/name の内容（実行中のテストバイナリの作業
+// ディレクトリ、つまりテスト対象パッケージのディレクトリからの相対パスで
+// 解決される）を JSON レスポンス body として書き込む。
 func ServeFixture(t *testing.T, w http.ResponseWriter, name string) {
 	t.Helper()
 	data, err := os.ReadFile(filepath.Join("testdata", name))
@@ -50,10 +50,10 @@ func ServeFixture(t *testing.T, w http.ResponseWriter, name string) {
 	}
 }
 
-// NewTestClient builds an obsclient.Client pointed at an
-// httptest.NewTLSServer server, with TLS verification disabled (the test
-// server uses a self-signed certificate) so real request/response plumbing
-// (including auth) is exercised end-to-end.
+// NewTestClient は httptest.NewTLSServer サーバーを指す obsclient.Client を
+// TLS 検証を無効にして構築する（テストサーバーは自己署名証明書を使うため）。
+// これにより（認証を含む）実際のリクエスト/レスポンスの配線がエンドツー
+// エンドで実行される。
 func NewTestClient(t *testing.T, serverURL, username, password string) *obsclient.Client {
 	t.Helper()
 
