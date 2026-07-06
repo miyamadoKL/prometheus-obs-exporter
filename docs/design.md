@@ -138,8 +138,11 @@ internal/collector/
 
 | メトリクス | ラベル | 型 | 元 |
 |---|---|---|---|
-| `obs_node_directory_tables` / `obs_node_directory_tables_unready` / `obs_node_directory_tables_unknown` | node | Gauge | `/stats/dt/DTInitStat`（XML、DT = directory table）。Gauge に `_total` は Prometheus 命名規約違反のため改名 |
+| `obs_node_directory_tables` / `obs_node_directory_tables_unready` / `obs_node_directory_tables_unknown` | node | Gauge | `/stats/dt/DTInitStat`（XML、DT = directory table） |
 | `obs_node_active_connections` | node | Gauge | `/?ping`（XML） |
+
+directory tables 系メトリクスは Gauge のため `_total` を付けない。
+`_total` は Prometheus の命名規約で counter に予約されているため改名した。
 
 ### metering collector（明示指定時のみ）
 
